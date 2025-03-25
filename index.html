@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Pet Care Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        #game-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        #pet-selection {
+            margin-bottom: 20px;
+        }
+        
+        #pet-display {
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 60px;
+        }
+        
+        #stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        
+        .stat {
+            width: 22%;
+            padding: 10px;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+        }
+        
+        .stat-bar {
+            height: 10px;
+            background-color: #4CAF50;
+            margin-top: 5px;
+            border-radius: 5px;
+        }
+        
+        #actions {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        #message {
+            margin: 20px 0;
+            min-height: 20px;
+            color: #666;
+        }
+        
+        .pet-option {
+            font-size: 30px;
+            margin: 0 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .pet-option:hover {
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>Virtual Pet Care</h1>
+        
+        <div id="pet-selection">
+            <h2>Choose your pet:</h2>
+            <div>
+                <span class="pet-option" onclick="selectPet('🐶')">🐶</span>
+                <span class="pet-option" onclick="selectPet('🐱')">🐱</span>
+                <span class="pet-option" onclick="selectPet('🐰')">🐰</span>
+                <span class="pet-option" onclick="selectPet('🐹')">🐹</span>
+                <span class="pet-option" onclick="selectPet('🦊')">🦊</span>
+                <button onclick="selectRandomPet()">Random Pet</button>
+            </div>
+        </div>
+        
+        <div id="pet-display">
+            <p>Select a pet to begin!</p>
+        </div>
+        
+        <div id="stats">
+            <div class="stat">
+                <div>Hunger</div>
+                <div class="stat-bar" id="hunger-bar"></div>
+            </div>
+            <div class="stat">
+                <div>Thirst</div>
+                <div class="stat-bar" id="thirst-bar"></div>
+            </div>
+            <div class="stat">
+                <div>Happiness</div>
+                <div class="stat-bar" id="happiness-bar"></div>
+            </div>
+            <div class="stat">
+                <div>Energy</div>
+                <div class="stat-bar" id="energy-bar"></div>
+            </div>
+        </div>
+        
+        <div id="message"></div>
+        
+        <div id="actions">
+            <button onclick="feed()">Feed</button>
+            <button onclick="giveWater()">Give Water</button>
+            <button onclick="play()">Play</button>
+            <button onclick="toggleSleep()" id="sleep-button">Put to Sleep</button>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        const pet = {
+            type: null,
+            hunger: 50,
+            thirst: 50,
+            happiness: 50,
+            energy: 50,
+            isSleeping: false,
+            age: 0,
+            lastUpdate: Date.now()
+        };
+        
+        // DOM elements
+        const petDisplay = document.getElementById('pet-display');
+        const messageEl = document.getElementById('message');
+        const sleepButton = document.getElementById('sleep-button');
+        
+        // Stat bars
+        const statBars = {
+            hunger: document.getElementById('hunger-bar'),
+            thirst: document.getElementById('thirst-bar'),
+            happiness: document.getElementById('happiness-bar'),
+            energy: document.getElementById('energy-bar')
+        };
+        
+        // Pet selection
+        function selectPet(petType) {
+            pet.type = petType;
+            startGame();
+        }
+        
+        function selectRandomPet() {
+            const pets = ['🐶', '🐱', '🐰', '🐹', '🦊', '🐦', '🐢', '🦄'];
+            pet.type = pets[Math.floor(Math.random() * pets.length)];
+            startGame();
+        }
+        
+        function startGame() {
+            // Hide selection UI
+            document.getElementById('pet-selection').style.display = 'none';
+            
+            // Show pet
+            petDisplay.innerHTML = `<p style="font-size: 60px;">${pet.type}</p>`;
+            
+            // Start game loop
+            setInterval(updateGame, 2000);
+            
+            // Initial update
+            updateStats();
+        }
+        
+        // Game actions
+        function feed() {
+            if (pet.isSleeping) {
+                showMessage(`${pet.type} is sleeping!`);
+                return;
+            }
+            
+            pet.hunger = Math.min(100, pet.hunger + 20);
+            pet.thirst = Math.max(0, pet.thirst - 5);
+            updateStats();
+            showMessage(`You fed ${pet.type}!`);
+        }
+        
+        function giveWater() {
+            if (pet.isSleeping) {
+                showMessage(`${pet.type} is sleeping!`);
+                return;
+            }
+            
+            pet.thirst = Math.min(100, pet.thirst + 20);
+            updateStats();
+            showMessage(`You gave water to ${pet.type}!`);
+        }
+        
+        function play() {
+            if (pet.isSleeping) {
+                showMessage(`${pet.type} is sleeping!`);
+                return;
+            }
+            
+            if (pet.energy < 20) {
+                showMessage(`${pet.type} is too tired to play!`);
+                return;
+            }
+            
+            pet.happiness = Math.min(100, pet.happiness + 15);
+            pet.energy = Math.max(0, pet.energy - 15);
+            pet.hunger = Math.max(0, pet.hunger - 5);
+            updateStats();
+            showMessage(`You played with ${pet.type}!`);
+        }
+        
+        function toggleSleep() {
+            pet.isSleeping = !pet.isSleeping;
+            
+            if (pet.isSleeping) {
+                sleepButton.textContent = 'Wake Up';
+                showMessage(`${pet.type} is sleeping... zzz`);
+            } else {
+                sleepButton.textContent = 'Put to Sleep';
+                showMessage(`You woke up ${pet.type}!`);
+            }
+        }
+        
+        // Game logic
+        function updateGame() {
+            if (pet.isSleeping) {
+                // Sleeping restores energy but increases hunger/thirst
+                pet.energy = Math.min(100, pet.energy + 10);
+                pet.hunger = Math.max(0, pet.hunger - 3);
+                pet.thirst = Math.max(0, pet.thirst - 3);
+            } else {
+                // Normal decay of stats
+                pet.hunger = Math.max(0, pet.hunger - 2);
+                pet.thirst = Math.max(0, pet.thirst - 2);
+                pet.happiness = Math.max(0, pet.happiness - 1);
+                pet.energy = Math.max(0, pet.energy - 1);
+            }
+            
+            pet.age++;
+            updateStats();
+            
+            // Check for critical needs
+            if (pet.hunger < 10) {
+                showMessage(`${pet.type} is very hungry!`);
+            } else if (pet.thirst < 10) {
+                showMessage(`${pet.type} is very thirsty!`);
+            } else if (pet.happiness < 10) {
+                showMessage(`${pet.type} is very sad!`);
+            } else if (pet.energy < 10 && !pet.isSleeping) {
+                showMessage(`${pet.type} is very tired!`);
+            }
+        }
+        
+        function updateStats() {
+            statBars.hunger.style.width = `${pet.hunger}%`;
+            statBars.thirst.style.width = `${pet.thirst}%`;
+            statBars.happiness.style.width = `${pet.happiness}%`;
+            statBars.energy.style.width = `${pet.energy}%`;
+            
+            // Change colors based on levels
+            statBars.hunger.style.backgroundColor = getStatColor(pet.hunger);
+            statBars.thirst.style.backgroundColor = getStatColor(pet.thirst);
+            statBars.happiness.style.backgroundColor = getStatColor(pet.happiness);
+            statBars.energy.style.backgroundColor = getStatColor(pet.energy);
+        }
+        
+        function getStatColor(value) {
+            if (value < 20) return '#ff3333'; // Red
+            if (value < 50) return '#ff9933'; // Orange
+            return '#4CAF50'; // Green
+        }
+        
+        function showMessage(msg) {
+            messageEl.textContent = msg;
+            setTimeout(() => {
+                if (messageEl.textContent === msg) {
+                    messageEl.textContent = '';
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
