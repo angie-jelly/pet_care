@@ -100,11 +100,32 @@
         .pet-option:hover {
             transform: scale(1.2);
         }
+        
+        #game-over {
+            display: none;
+            color: red;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        
+        #restart-button {
+            display: none;
+            margin: 20px auto;
+            background-color: #ff3333;
+        }
+        
+        #restart-button:hover {
+            background-color: #cc0000;
+        }
     </style>
 </head>
 <body>
     <div id="game-container">
         <h1>Virtual Pet Care</h1>
+        
+        <div id="game-over"></div>
+        <button id="restart-button" onclick="restartGame()">Try Again</button>
         
         <div id="pet-selection">
             <h2>Choose your pet:</h2>
@@ -161,6 +182,7 @@
             energy: 50,
             isSleeping: false,
             age: 0,
+            isDead: false,
             lastUpdate: Date.now()
         };
         
@@ -168,6 +190,9 @@
         const petDisplay = document.getElementById('pet-display');
         const messageEl = document.getElementById('message');
         const sleepButton = document.getElementById('sleep-button');
+        const gameOverEl = document.getElementById('game-over');
+        const restartButton = document.getElementById('restart-button');
+        const actionsEl = document.getElementById('actions');
         
         // Stat bars
         const statBars = {
@@ -176,6 +201,9 @@
             happiness: document.getElementById('happiness-bar'),
             energy: document.getElementById('energy-bar')
         };
+        
+        // Game interval
+        let gameInterval;
         
         // Pet selection
         function selectPet(petType) {
@@ -190,6 +218,23 @@
         }
         
         function startGame() {
+            // Reset pet stats
+            pet.hunger = 50;
+            pet.thirst = 50;
+            pet.happiness = 50;
+            pet.energy = 50;
+            pet.isSleeping = false;
+            pet.age = 0;
+            pet.isDead = false;
+            
+            // Hide game over and restart button
+            gameOverEl.style.display = 'none';
+            restartButton.style.display = 'none';
+            
+            // Show game elements
+            actionsEl.style.display = 'flex';
+            document.getElementById('stats').style.display = 'flex';
+            
             // Hide selection UI
             document.getElementById('pet-selection').style.display = 'none';
             
@@ -197,14 +242,42 @@
             petDisplay.innerHTML = `<p style="font-size: 60px;">${pet.type}</p>`;
             
             // Start game loop
-            setInterval(updateGame, 2000);
+            if (gameInterval) clearInterval(gameInterval);
+            gameInterval = setInterval(updateGame, 2000);
             
             // Initial update
             updateStats();
+            showMessage(`Welcome to your new ${pet.type}! Take good care of it!`);
+        }
+        
+        function endGame() {
+            clearInterval(gameInterval);
+            pet.isDead = true;
+            
+            // Hide game elements
+            actionsEl.style.display = 'none';
+            document.getElementById('stats').style.display = 'none';
+            
+            // Show dead pet
+            petDisplay.innerHTML = `<p style="font-size: 60px;">💀</p>`;
+            
+            // Show game over message
+            gameOverEl.style.display = 'block';
+            gameOverEl.textContent = `You have now killed your ${pet.type}. The next time you play please don't kill your pet.`;
+            
+            // Show restart button
+            restartButton.style.display = 'block';
+        }
+        
+        function restartGame() {
+            // Show selection screen again
+            document.getElementById('pet-selection').style.display = 'block';
+            petDisplay.innerHTML = '<p>Select a pet to begin!</p>';
         }
         
         // Game actions
         function feed() {
+            if (pet.isDead) return;
             if (pet.isSleeping) {
                 showMessage(`${pet.type} is sleeping!`);
                 return;
@@ -217,6 +290,7 @@
         }
         
         function giveWater() {
+            if (pet.isDead) return;
             if (pet.isSleeping) {
                 showMessage(`${pet.type} is sleeping!`);
                 return;
@@ -228,6 +302,7 @@
         }
         
         function play() {
+            if (pet.isDead) return;
             if (pet.isSleeping) {
                 showMessage(`${pet.type} is sleeping!`);
                 return;
@@ -246,6 +321,7 @@
         }
         
         function toggleSleep() {
+            if (pet.isDead) return;
             pet.isSleeping = !pet.isSleeping;
             
             if (pet.isSleeping) {
@@ -259,6 +335,8 @@
         
         // Game logic
         function updateGame() {
+            if (pet.isDead) return;
+            
             if (pet.isSleeping) {
                 // Sleeping restores energy but increases hunger/thirst
                 pet.energy = Math.min(100, pet.energy + 10);
@@ -275,15 +353,21 @@
             pet.age++;
             updateStats();
             
+            // Check for death conditions
+            if (pet.hunger <= 0 || pet.thirst <= 0 || pet.happiness <= 0) {
+                endGame();
+                return;
+            }
+            
             // Check for critical needs
             if (pet.hunger < 10) {
-                showMessage(`${pet.type} is very hungry!`);
+                showMessage(`${pet.type} is starving! Feed it now!`);
             } else if (pet.thirst < 10) {
-                showMessage(`${pet.type} is very thirsty!`);
+                showMessage(`${pet.type} is dehydrated! Give it water!`);
             } else if (pet.happiness < 10) {
-                showMessage(`${pet.type} is very sad!`);
+                showMessage(`${pet.type} is depressed! Play with it!`);
             } else if (pet.energy < 10 && !pet.isSleeping) {
-                showMessage(`${pet.type} is very tired!`);
+                showMessage(`${pet.type} is exhausted! Let it sleep!`);
             }
         }
         
@@ -301,6 +385,7 @@
         }
         
         function getStatColor(value) {
+            if (value <= 0) return '#000000'; // Black when dead
             if (value < 20) return '#ff3333'; // Red
             if (value < 50) return '#ff9933'; // Orange
             return '#4CAF50'; // Green
